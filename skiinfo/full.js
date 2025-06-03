@@ -136,4 +136,4 @@ if (odhElement) {
   customElements.whenDefined('odh-tourism-skiinfo').then(() => {
     setTimeout(initializeComponentModifications, 150);
   }).catch(error => {});
-}
+} else {}

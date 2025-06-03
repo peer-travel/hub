@@ -7,7 +7,7 @@ async function injectCustomStyles() {
   if (stylesInjected || !odhElement || !odhElement.shadowRoot) {
     return stylesInjected;
   }
-  const cssUrl = 'https://cdn.jsdelivr.net/gh/peer-travel/hub@main/skiinfo/full.css'; // Assicurati che questo URL sia corretto
+  const cssUrl = 'https://cdn.jsdelivr.net/gh/peer-travel/hub@main/skiinfo/full.css';
   try {
     const response = await fetch(cssUrl);
     if (!response.ok) {
@@ -50,7 +50,7 @@ function hideSpecificInfoRows() {
     const currentLanguage = odhElement.getAttribute('language') || 'en';
     const webLabels = {
       'de': 'Web:',
-      'it': 'Web:', // Verifica l'etichetta corretta per l'italiano
+      'it': 'Web:',
       'en': 'Web:'
     };
     const expectedWebLabelText = webLabels[currentLanguage] || webLabels['en'];
@@ -99,26 +99,20 @@ function selectTargetTab() {
         itemDetailInstance.selectedMenu = targetTab;
         itemDetailInstance.$forceUpdate();
       }
-      // La chiamata a hideSpecificInfoRows è ora gestita in runPostRenderModifications
-      // per assicurare che venga eseguita anche sui ri-render.
+
       return true;
     }
   }
   return false;
 }
 
-// Questa funzione è la callback del MutationObserver
 async function runPostRenderModifications() {
-  // Imposta il tab target solo la prima volta (o se non ancora completato)
   if (!tabActionCompleted) {
     tabActionCompleted = selectTargetTab();
   }
 
-  // Controlla sempre se il tab "Info" è attivo e, in caso, applica la logica di nascondiglio.
-  // Questo gestirà sia il caricamento iniziale sia i ritorni al tab "Info".
   if (odhElement && odhElement.vueComponent) {
     const mainVueInstance = odhElement.vueComponent;
-    // Assicurati che i figli siano accessibili e che itemDetailInstance esista
     const itemDetailInstance = mainVueInstance.$children && mainVueInstance.$children.find(
         child => child && typeof child.selectedMenu === 'string'
     );
@@ -128,11 +122,6 @@ async function runPostRenderModifications() {
     }
   }
 
-  // NON disconnettere l'observer qui, per permettere alla funzione di essere richiamata
-  // quando l'utente naviga tra i tab e il contenuto del tab "Info" viene ri-renderizzato.
-  // if (tabActionCompleted && mainObserver) {
-  //   mainObserver.disconnect();
-  // }
 }
 
 if (odhElement) {
@@ -142,19 +131,16 @@ if (odhElement) {
     if (odhElement.shadowRoot) {
       await injectCustomStyles();
       mainObserver.observe(odhElement.shadowRoot, {
-        childList: true,  // Osserva aggiunte/rimozioni di figli
-        subtree: true     // Osserva anche i discendenti
-        // Non è strettamente necessario osservare gli 'attributes' per questo caso,
-        // a meno che il cambio di tab non modifichi solo attributi senza cambiare i figli.
-        // Ma childList e subtree dovrebbero coprire il rendering del contenuto del tab.
+        childList: true,
+        subtree: true
       });
-      runPostRenderModifications(); // Esegui una prima volta all'inizializzazione
+      runPostRenderModifications();
     }
   };
 
   customElements.whenDefined('odh-tourism-skiinfo').then(() => {
     setTimeout(initializeComponentModifications, 150);
-  }).catch(error => { /* Gestione errore silenziata */ });
+  }).catch(error => { /* psssst */ });
 } else {
-  /* Gestione errore silenziata */
+  /* psssst */
 }

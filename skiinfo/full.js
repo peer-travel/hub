@@ -1,7 +1,7 @@
 const odhElement = document.getElementById('mySkiInfo');
 let tabActionCompleted = false;
 let stylesInjected = false;
-let infoRowsProcessed = false; // Nuovo flag per tracciare se le righe info sono state elaborate
+let infoRowsProcessed = false;
 let mainObserver = null;
 
 async function injectCustomStyles() {
@@ -70,7 +70,7 @@ function selectTargetTab() {
     if (itemDetailInstance) {
       const availableMenus = itemDetailInstance.menus || [];
 
-      let targetTab = 'Lifts'; 
+      let targetTab = 'Info'; 
 
       if (!availableMenus.includes(targetTab)) {
         if (availableMenus.includes('Info')) {
@@ -102,11 +102,11 @@ function selectTargetTab() {
 
 async function runPostRenderModifications() {
   if (!tabActionCompleted) {
-    tabActionCompleted = selectTargetTab(); // Questo ora chiama anche hideDivsContainingSpecificSVGs internamente se il tab è Info
+    tabActionCompleted = selectTargetTab(); 
   }
   
   if(tabActionCompleted) {
-    hideDivsContainingSpecificSVGs(); // Chiamata aggiuntiva per sicurezza dopo il cambio tab
+    hideDivsContainingSpecificSVGs();
   }
 
   if (tabActionCompleted && mainObserver) {
@@ -122,7 +122,7 @@ if (odhElement) {
   const initializeComponentModifications = async () => {
     if (odhElement.shadowRoot) {
       await injectCustomStyles(); 
-      mainObserver.observe(odhElement.shadowRoot, { childList: true, subtree: true, attributes: true }); // Aggiunto attributes per più trigger
+      mainObserver.observe(odhElement.shadowRoot, { childList: true, subtree: true, attributes: true });
       runPostRenderModifications(); 
     } else {
       /* console.warn('ShadowRoot not found for odh-tourism-skiinfo.'); */

@@ -31,29 +31,3 @@
           width: 100% !important;
         }
       }
-      /* Nasconde l'SVG con classe map-icon e icon */
-      svg.map-icon.icon {
-        display: none !important;
-      }
-      /* Se c'è uno span subito dopo l'SVG della mappa che vuoi nascondere (es. l'etichetta "Ort:") */
-      svg.map-icon.icon + span {
-        /* display: none !important; */ /* Decommenta se vuoi nascondere anche lo span etichetta */
-      }
-      /* Se anche il valore (es. il nome del luogo) è in uno span successivo che vuoi nascondere */
-      svg.map-icon.icon + span + span {
-          /* display: none !important; */ /* Decommenta se vuoi nascondere anche lo span valore */
-      }
-
-
-      /* Nasconde l'SVG con classe phone icon */
-      svg.phone.icon {
-        display: none !important;
-      }
-      /* Se c'è uno span subito dopo l'SVG del telefono che vuoi nascondere (es. l'etichetta "Telefon:") */
-      svg.phone.icon + span {
-        /* display: none !important; */ /* Decommenta se vuoi nascondere anche lo span etichetta */
-      }
-      /* Se anche il valore (es. il numero di telefono) è in uno span successivo che vuoi nascondere */
-      svg.phone.icon + span + span {
-          /* display: none !important; */ /* Decommenta se vuoi nascondere anche lo span valore */
-      }

@@ -8,7 +8,7 @@ async function injectCustomStyles() {
     return stylesInjected;
   }
 
-  const cssUrl = 'https://cdn.jsdelivr.net/gh/peer-travel/hub@main/skiinfo/full.css';
+  const cssUrl = 'https://cdn.jsdelivr.net/gh/peer-travel/hub@main/skiinfo/full.min.css';
 
   try {
     const response = await fetch(cssUrl);

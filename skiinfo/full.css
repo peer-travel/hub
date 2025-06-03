@@ -1,1 +1,33 @@
 
+      body, html, .fs-5, .fw-bold {font-size: .95rem !important;}
+      div.d-flex.flex-column.shadow-sm > div[style*="background-image"].flex-shrink-0.d-flex {
+        background-image: none !important;
+        height: 80px !important;
+      }
+      span.p-1 { display: none !important; }
+      .opendatahubid { display: none !important; }
+      h1.mb-0 { display: none !important; }
+      div.flex-grow-1 { padding: 0 !important; }
+      div.shadow-sm { box-shadow: none !important; min-height: auto !important; }
+      div.mx-2 { margin-left: 0 !important; margin-right: 0 !important; }
+      div.px-2, div.p-2 { padding-left: 0 !important; padding-right: 0 !important; }
+      .h-100 > div:nth-child(1) > div:nth-child(3), div.mb-0  { display: none !important; }
+      .flex-grow-1.p-4 .row > div[class*="col-"] {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+      }
+      @media (min-width: 768px) {
+        .flex-grow-1.p-4 .row > div[class*="col-"] {
+          flex: 0 0 50% !important;
+          max-width: 50% !important;
+          width: 50% !important;
+        }
+      }
+      @media (min-width: 992px) {
+        .flex-grow-1.p-4 .row > div[class*="col-"] {
+          flex: 0 0 100% !important;
+          max-width: 100% !important;
+          width: 100% !important;
+        }
+      }

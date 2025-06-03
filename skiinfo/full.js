@@ -1,59 +1,68 @@
 const odhElement = document.getElementById('mySkiInfo');
 let tabActionCompleted = false;
 let stylesInjected = false;
-let infoRowsProcessed = false;
 let mainObserver = null;
 
 async function injectCustomStyles() {
   if (stylesInjected || !odhElement || !odhElement.shadowRoot) {
     return stylesInjected;
   }
-
   const cssUrl = 'https://cdn.jsdelivr.net/gh/peer-travel/hub@main/skiinfo/full.css';
-
   try {
     const response = await fetch(cssUrl);
     if (!response.ok) {
-      /* console.error(`CSS Fetch Error: ${response.status} for ${cssUrl}`); */
       return false;
     }
     const cssText = await response.text();
     const styleSheet = document.createElement('style');
-    
-    styleSheet.textContent = cssText; // Il cssText caricato dall'URL
-
+    styleSheet.textContent = cssText;
     odhElement.shadowRoot.appendChild(styleSheet);
     stylesInjected = true;
-    /* console.log(`SUCCESS: Custom CSS from ${cssUrl} injected.`); */
     return true;
   } catch (error) {
-    /* console.error(`Error fetching/applying CSS from ${cssUrl}:`, error); */
     return false;
   }
 }
 
-function hideDivsContainingSpecificSVGs() {
+function hideSpecificInfoRows() {
   if (!odhElement || !odhElement.shadowRoot) return;
 
   const shadow = odhElement.shadowRoot;
-  const infoRowSelector = '.flex-grow-1[class*="p-"] > .d-flex.flex-column.gap-4 > .row > div[class*="col-"]';
+  const infoRowSelector = 'div[class*="col-"]';
   const infoRows = shadow.querySelectorAll(infoRowSelector);
-
-  let itemsHiddenThisRun = 0;
 
   infoRows.forEach(rowDiv => {
     const hasMapIcon = rowDiv.querySelector('svg.map-icon.icon');
-    const hasPhoneIcon = rowDiv.querySelector('svg.phone.icon');
+    if (hasMapIcon && rowDiv.style.display !== 'none') {
+      rowDiv.style.setProperty('display', 'none', 'important');
+      return;
+    }
 
-    if ((hasMapIcon || hasPhoneIcon) && rowDiv.style.display !== 'none') {
-      rowDiv.style.display = 'none';
-      itemsHiddenThisRun++;
-      /* console.log('Hiding info row containing specific SVG:', rowDiv); */
+    const hasPhoneIcon = rowDiv.querySelector('svg.phone.icon');
+    if (hasPhoneIcon && rowDiv.style.display !== 'none') {
+      rowDiv.style.setProperty('display', 'none', 'important');
+      return;
+    }
+
+    const currentLanguage = odhElement.getAttribute('language') || 'en';
+    const webLabels = {
+      'de': 'Web:',
+      'it': 'Web:',
+      'en': 'Web:'
+    };
+    const expectedWebLabelText = webLabels[currentLanguage] || webLabels['en'];
+
+    const webLabelSpan = Array.from(rowDiv.querySelectorAll('span')).find(
+      span => span.textContent.trim().toLowerCase() === expectedWebLabelText.toLowerCase()
+    );
+
+    if (webLabelSpan && rowDiv.style.display !== 'none') {
+      const hasWebLink = rowDiv.querySelector('a[href^="http"]');
+      if (hasWebLink) {
+        rowDiv.style.setProperty('display', 'none', 'important');
+      }
     }
   });
-  if(itemsHiddenThisRun > 0){
-    /* console.log(`${itemsHiddenThisRun} info rows with specific SVGs hidden in this pass.`); */
-  }
 }
 
 function selectTargetTab() {
@@ -69,30 +78,25 @@ function selectTargetTab() {
 
     if (itemDetailInstance) {
       const availableMenus = itemDetailInstance.menus || [];
+      let targetTab = 'Info';
 
-      let targetTab = 'Info'; 
-
-      if (!availableMenus.includes(targetTab)) {
-        if (availableMenus.includes('Info')) {
-            targetTab = 'Info';
-        } else if (availableMenus.includes('Slopes')) {
-            targetTab = 'Slopes';
-        } else if (availableMenus.length > 0) {
-            targetTab = availableMenus[0];
-        } else {
-            /* console.warn('No available menus to select.'); */
-            return true; 
-        }
+      if (availableMenus.includes('Lifts')) {
+        targetTab = 'Lifts';
+      } else if (availableMenus.includes('Slopes')) {
+        targetTab = 'Slopes';
+      } else if (!availableMenus.includes('Info') && availableMenus.length > 0) {
+        targetTab = availableMenus[0];
+      } else if (!availableMenus.includes('Info') && availableMenus.length === 0) {
+        return true;
       }
-      
+
       if (itemDetailInstance.selectedMenu !== targetTab) {
         itemDetailInstance.selectedMenu = targetTab;
         itemDetailInstance.$forceUpdate();
-        /* console.log(`SUCCESS: Set selectedMenu to "${targetTab}".`); */
       }
 
-      if (itemDetailInstance.selectedMenu === 'Info' || targetTab === 'Info') { // O se vuoi farlo sempre
-          hideDivsContainingSpecificSVGs();
+      if (itemDetailInstance.selectedMenu === 'Info' || targetTab === 'Info') {
+        hideSpecificInfoRows();
       }
       return true;
     }
@@ -102,18 +106,16 @@ function selectTargetTab() {
 
 async function runPostRenderModifications() {
   if (!tabActionCompleted) {
-    tabActionCompleted = selectTargetTab(); 
+    tabActionCompleted = selectTargetTab();
   }
-  
-  if(tabActionCompleted) {
-    hideDivsContainingSpecificSVGs();
+
+  if (tabActionCompleted) {
+    hideSpecificInfoRows();
   }
 
   if (tabActionCompleted && mainObserver) {
     mainObserver.disconnect();
-    /* console.log('Tab action and initial SVG hide completed, observer disconnected.'); */
   }
-
 }
 
 if (odhElement) {
@@ -121,19 +123,17 @@ if (odhElement) {
 
   const initializeComponentModifications = async () => {
     if (odhElement.shadowRoot) {
-      await injectCustomStyles(); 
-      mainObserver.observe(odhElement.shadowRoot, { childList: true, subtree: true, attributes: true });
-      runPostRenderModifications(); 
-    } else {
-      /* console.warn('ShadowRoot not found for odh-tourism-skiinfo.'); */
+      await injectCustomStyles();
+      mainObserver.observe(odhElement.shadowRoot, {
+        childList: true,
+        subtree: true,
+        attributes: true
+      });
+      runPostRenderModifications();
     }
   };
 
   customElements.whenDefined('odh-tourism-skiinfo').then(() => {
-    setTimeout(initializeComponentModifications, 150); // Leggermente aumentato per fetch CSS e init
-  }).catch(error => {
-    /* console.error('Error waiting for odh-tourism-skiinfo definition:', error); */
-  });
-} else {
-  /* console.error('Element with ID "mySkiInfo" not found. Script will not run.'); */
+    setTimeout(initializeComponentModifications, 150);
+  }).catch(error => {});
 }

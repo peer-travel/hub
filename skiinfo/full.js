@@ -31,7 +31,6 @@ function hideSpecificInfoRows() {
   if (!odhElement || !odhElement.shadowRoot) return;
 
   const shadow = odhElement.shadowRoot;
-  // Selettore per i div "riga informativa". Verifica e adatta se necessario.
   const infoRowSelector = 'div[class*="col-"]';
   const infoRows = shadow.querySelectorAll(infoRowSelector);
 
@@ -82,63 +81,58 @@ function selectTargetTab() {
 
     if (itemDetailInstance) {
       const availableMenus = itemDetailInstance.menus || [];
-      let targetTab = 'Info'; // Imposta "Info" come prima scelta
+      let targetTab = 'Info';
 
-      // Se "Info" non è disponibile (es. escluso tramite exclude-menus),
-      // allora cerca un'alternativa
       if (!availableMenus.includes(targetTab)) {
-        if (availableMenus.includes('Lifts')) { // Seconda scelta
+        if (availableMenus.includes('Lifts')) {
           targetTab = 'Lifts';
-        } else if (availableMenus.includes('Slopes')) { // Terza scelta
+        } else if (availableMenus.includes('Slopes')) {
           targetTab = 'Slopes';
-        } else if (availableMenus.length > 0) { // Altrimenti il primo disponibile
+        } else if (availableMenus.length > 0) {
           targetTab = availableMenus[0];
         } else {
-          // console.warn('No available menus to select.');
-          return true; // Nessun tab da selezionare, azione considerata completata
+          return true;
         }
       }
 
       if (itemDetailInstance.selectedMenu !== targetTab) {
         itemDetailInstance.selectedMenu = targetTab;
         itemDetailInstance.$forceUpdate();
-        // console.log(`SUCCESS: Set selectedMenu to "${targetTab}".`);
       }
-
-      // Esegui hideSpecificInfoRows se il tab selezionato (o target) è "Info"
-      // Questa logica rimane valida perché vuoi nascondere elementi *nel* tab Info
-      if (itemDetailInstance.selectedMenu === 'Info') {
-        hideSpecificInfoRows();
-      }
+      // La chiamata a hideSpecificInfoRows è ora gestita in runPostRenderModifications
+      // per assicurare che venga eseguita anche sui ri-render.
       return true;
     }
   }
   return false;
 }
 
+// Questa funzione è la callback del MutationObserver
 async function runPostRenderModifications() {
+  // Imposta il tab target solo la prima volta (o se non ancora completato)
   if (!tabActionCompleted) {
     tabActionCompleted = selectTargetTab();
   }
 
-  // Chiamata aggiuntiva per assicurarsi che gli elementi vengano nascosti
-  // se il tab Info è stato selezionato o era già attivo.
-  if (tabActionCompleted) {
+  // Controlla sempre se il tab "Info" è attivo e, in caso, applica la logica di nascondiglio.
+  // Questo gestirà sia il caricamento iniziale sia i ritorni al tab "Info".
+  if (odhElement && odhElement.vueComponent) {
     const mainVueInstance = odhElement.vueComponent;
-    if (mainVueInstance && mainVueInstance.$children) {
-        const itemDetailInstance = mainVueInstance.$children.find(
-            child => child && typeof child.selectedMenu === 'string'
-        );
-        if (itemDetailInstance && itemDetailInstance.selectedMenu === 'Info') {
-            hideSpecificInfoRows();
-        }
+    // Assicurati che i figli siano accessibili e che itemDetailInstance esista
+    const itemDetailInstance = mainVueInstance.$children && mainVueInstance.$children.find(
+        child => child && typeof child.selectedMenu === 'string'
+    );
+    
+    if (itemDetailInstance && itemDetailInstance.selectedMenu === 'Info') {
+      hideSpecificInfoRows();
     }
   }
 
-  if (tabActionCompleted && mainObserver) {
-    mainObserver.disconnect();
-    // console.log('Tab action and initial SVG hide completed, observer disconnected.');
-  }
+  // NON disconnettere l'observer qui, per permettere alla funzione di essere richiamata
+  // quando l'utente naviga tra i tab e il contenuto del tab "Info" viene ri-renderizzato.
+  // if (tabActionCompleted && mainObserver) {
+  //   mainObserver.disconnect();
+  // }
 }
 
 if (odhElement) {
@@ -148,19 +142,19 @@ if (odhElement) {
     if (odhElement.shadowRoot) {
       await injectCustomStyles();
       mainObserver.observe(odhElement.shadowRoot, {
-        childList: true,
-        subtree: true,
-        attributes: true
+        childList: true,  // Osserva aggiunte/rimozioni di figli
+        subtree: true     // Osserva anche i discendenti
+        // Non è strettamente necessario osservare gli 'attributes' per questo caso,
+        // a meno che il cambio di tab non modifichi solo attributi senza cambiare i figli.
+        // Ma childList e subtree dovrebbero coprire il rendering del contenuto del tab.
       });
-      runPostRenderModifications();
-    } else {
-      // console.warn('ShadowRoot not found for odh-tourism-skiinfo.');
+      runPostRenderModifications(); // Esegui una prima volta all'inizializzazione
     }
   };
 
   customElements.whenDefined('odh-tourism-skiinfo').then(() => {
     setTimeout(initializeComponentModifications, 150);
-  }).catch(error => { /* console.error('Error waiting for odh-tourism-skiinfo definition:', error); */ });
+  }).catch(error => { /* Gestione errore silenziata */ });
 } else {
-  /* console.error('Element with ID "mySkiInfo" not found. Script will not run.'); */
+  /* Gestione errore silenziata */
 }

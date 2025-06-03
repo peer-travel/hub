@@ -1,5 +1,3 @@
-// Contenuto per https://raw.githubusercontent.com/peer-travel/hub/main/script.js
-
 const odhElement = document.getElementById('mySkiInfo');
 let tabActionCompleted = false;
 let stylesInjected = false;
@@ -22,9 +20,6 @@ async function injectCustomStyles() {
     const cssText = await response.text();
     const styleSheet = document.createElement('style');
     
-    // Inserisci qui SOLO gli stili che NON dipendono dal contenuto specifico dei figli,
-    // come quelli per l'header, layout colonne, opendatahubid, ecc.
-    // Le regole per nascondere i div basati su :nth-child() vanno rimosse da qui.
     styleSheet.textContent = cssText; // Il cssText caricato dall'URL
 
     odhElement.shadowRoot.appendChild(styleSheet);
@@ -41,12 +36,6 @@ function hideDivsContainingSpecificSVGs() {
   if (!odhElement || !odhElement.shadowRoot) return;
 
   const shadow = odhElement.shadowRoot;
-  
-  // Selettore per i div "riga informativa" nel tab Info.
-  // Basato sull'HTML fornito: <div class="col-12 col-lg-4 d-flex align-items-center gap-2">
-  // Questo selettore deve essere abbastanza specifico per il contesto del tab Info.
-  // Assumiamo che questi div siano figli diretti di un .row dentro il contenitore del tab Info.
-  // Il contenitore del contenuto del tab "Info" è: .flex-grow-1[class*="p-"] > .d-flex.flex-column.gap-4
   const infoRowSelector = '.flex-grow-1[class*="p-"] > .d-flex.flex-column.gap-4 > .row > div[class*="col-"]';
   const infoRows = shadow.querySelectorAll(infoRowSelector);
 
@@ -65,11 +54,7 @@ function hideDivsContainingSpecificSVGs() {
   if(itemsHiddenThisRun > 0){
     /* console.log(`${itemsHiddenThisRun} info rows with specific SVGs hidden in this pass.`); */
   }
-  // Non impostiamo un flag globale "completato" qui, perché l'observer potrebbe
-  // chiamare questa funzione più volte mentre il DOM si assesta.
-  // Il fatto che non nasconda più nulla nelle passate successive è sufficiente.
 }
-
 
 function selectTargetTab() {
   if (!odhElement || !odhElement.vueComponent) return false;
@@ -84,13 +69,13 @@ function selectTargetTab() {
 
     if (itemDetailInstance) {
       const availableMenus = itemDetailInstance.menus || [];
-      // Con exclude-menus="Weather,Webcam", i tab rimanenti dovrebbero essere Info, Lifts, Slopes
+
       let targetTab = 'Lifts'; 
 
       if (!availableMenus.includes(targetTab)) {
         if (availableMenus.includes('Info')) {
             targetTab = 'Info';
-        } else if (availableMenus.includes('Slopes')) { // Altra opzione valida
+        } else if (availableMenus.includes('Slopes')) {
             targetTab = 'Slopes';
         } else if (availableMenus.length > 0) {
             targetTab = availableMenus[0];
@@ -105,7 +90,7 @@ function selectTargetTab() {
         itemDetailInstance.$forceUpdate();
         /* console.log(`SUCCESS: Set selectedMenu to "${targetTab}".`); */
       }
-      // Nascondi gli elementi specifici *dopo* che il tab è stato selezionato e potenzialmente renderizzato
+
       if (itemDetailInstance.selectedMenu === 'Info' || targetTab === 'Info') { // O se vuoi farlo sempre
           hideDivsContainingSpecificSVGs();
       }
@@ -120,19 +105,15 @@ async function runPostRenderModifications() {
     tabActionCompleted = selectTargetTab(); // Questo ora chiama anche hideDivsContainingSpecificSVGs internamente se il tab è Info
   }
   
-  // Se la selezione del tab è andata a buon fine, potremmo voler chiamare di nuovo hideDivs
-  // nel caso il contenuto del tab sia stato appena renderizzato.
-  // L'observer si occuperà di ulteriori chiamate se il DOM cambia ancora.
   if(tabActionCompleted) {
     hideDivsContainingSpecificSVGs(); // Chiamata aggiuntiva per sicurezza dopo il cambio tab
   }
 
-  // Per ora, disconnettiamo l'observer solo dopo che il tab è stato gestito la prima volta.
-  // Il nascondiglio degli SVG avverrà più volte se necessario, ma non dovrebbe causare problemi.
   if (tabActionCompleted && mainObserver) {
     mainObserver.disconnect();
     /* console.log('Tab action and initial SVG hide completed, observer disconnected.'); */
   }
+
 }
 
 if (odhElement) {

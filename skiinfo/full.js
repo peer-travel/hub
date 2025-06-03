@@ -7,10 +7,11 @@ async function injectCustomStyles() {
   if (stylesInjected || !odhElement || !odhElement.shadowRoot) {
     return stylesInjected;
   }
-  const cssUrl = 'https://cdn.jsdelivr.net/gh/peer-travel/hub@main/skiinfo/full.css';
+  const cssUrl = 'https://cdn.jsdelivr.net/gh/peer-travel/hub@main/skiinfo/full.css'; // Assicurati che questo URL sia corretto
   try {
     const response = await fetch(cssUrl);
     if (!response.ok) {
+      // console.error(`CSS Fetch Error: ${response.status} for ${cssUrl}`);
       return false;
     }
     const cssText = await response.text();
@@ -18,8 +19,10 @@ async function injectCustomStyles() {
     styleSheet.textContent = cssText;
     odhElement.shadowRoot.appendChild(styleSheet);
     stylesInjected = true;
+    // console.log(`SUCCESS: Custom CSS from ${cssUrl} injected.`);
     return true;
   } catch (error) {
+    // console.error(`Error fetching/applying CSS from ${cssUrl}:`, error);
     return false;
   }
 }
@@ -28,6 +31,7 @@ function hideSpecificInfoRows() {
   if (!odhElement || !odhElement.shadowRoot) return;
 
   const shadow = odhElement.shadowRoot;
+  // Selettore per i div "riga informativa". Verifica e adatta se necessario.
   const infoRowSelector = 'div[class*="col-"]';
   const infoRows = shadow.querySelectorAll(infoRowSelector);
 
@@ -47,7 +51,7 @@ function hideSpecificInfoRows() {
     const currentLanguage = odhElement.getAttribute('language') || 'en';
     const webLabels = {
       'de': 'Web:',
-      'it': 'Web:',
+      'it': 'Web:', // Verifica l'etichetta corretta per l'italiano
       'en': 'Web:'
     };
     const expectedWebLabelText = webLabels[currentLanguage] || webLabels['en'];
@@ -78,24 +82,32 @@ function selectTargetTab() {
 
     if (itemDetailInstance) {
       const availableMenus = itemDetailInstance.menus || [];
-      let targetTab = 'Info';
+      let targetTab = 'Info'; // Imposta "Info" come prima scelta
 
-      if (availableMenus.includes('Lifts')) {
-        targetTab = 'Lifts';
-      } else if (availableMenus.includes('Slopes')) {
-        targetTab = 'Slopes';
-      } else if (!availableMenus.includes('Info') && availableMenus.length > 0) {
-        targetTab = availableMenus[0];
-      } else if (!availableMenus.includes('Info') && availableMenus.length === 0) {
-        return true;
+      // Se "Info" non è disponibile (es. escluso tramite exclude-menus),
+      // allora cerca un'alternativa
+      if (!availableMenus.includes(targetTab)) {
+        if (availableMenus.includes('Lifts')) { // Seconda scelta
+          targetTab = 'Lifts';
+        } else if (availableMenus.includes('Slopes')) { // Terza scelta
+          targetTab = 'Slopes';
+        } else if (availableMenus.length > 0) { // Altrimenti il primo disponibile
+          targetTab = availableMenus[0];
+        } else {
+          // console.warn('No available menus to select.');
+          return true; // Nessun tab da selezionare, azione considerata completata
+        }
       }
 
       if (itemDetailInstance.selectedMenu !== targetTab) {
         itemDetailInstance.selectedMenu = targetTab;
         itemDetailInstance.$forceUpdate();
+        // console.log(`SUCCESS: Set selectedMenu to "${targetTab}".`);
       }
 
-      if (itemDetailInstance.selectedMenu === 'Info' || targetTab === 'Info') {
+      // Esegui hideSpecificInfoRows se il tab selezionato (o target) è "Info"
+      // Questa logica rimane valida perché vuoi nascondere elementi *nel* tab Info
+      if (itemDetailInstance.selectedMenu === 'Info') {
         hideSpecificInfoRows();
       }
       return true;
@@ -109,12 +121,23 @@ async function runPostRenderModifications() {
     tabActionCompleted = selectTargetTab();
   }
 
+  // Chiamata aggiuntiva per assicurarsi che gli elementi vengano nascosti
+  // se il tab Info è stato selezionato o era già attivo.
   if (tabActionCompleted) {
-    hideSpecificInfoRows();
+    const mainVueInstance = odhElement.vueComponent;
+    if (mainVueInstance && mainVueInstance.$children) {
+        const itemDetailInstance = mainVueInstance.$children.find(
+            child => child && typeof child.selectedMenu === 'string'
+        );
+        if (itemDetailInstance && itemDetailInstance.selectedMenu === 'Info') {
+            hideSpecificInfoRows();
+        }
+    }
   }
 
   if (tabActionCompleted && mainObserver) {
     mainObserver.disconnect();
+    // console.log('Tab action and initial SVG hide completed, observer disconnected.');
   }
 }
 
@@ -130,10 +153,14 @@ if (odhElement) {
         attributes: true
       });
       runPostRenderModifications();
+    } else {
+      // console.warn('ShadowRoot not found for odh-tourism-skiinfo.');
     }
   };
 
   customElements.whenDefined('odh-tourism-skiinfo').then(() => {
     setTimeout(initializeComponentModifications, 150);
-  }).catch(error => {});
-} else {}
+  }).catch(error => { /* console.error('Error waiting for odh-tourism-skiinfo definition:', error); */ });
+} else {
+  /* console.error('Element with ID "mySkiInfo" not found. Script will not run.'); */
+}

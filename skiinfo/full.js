@@ -9,7 +9,7 @@ async function injectCustomStyles() {
     return stylesInjected;
   }
 
-  const cssUrl = 'https://cdn.jsdelivr.net/gh/peer-travel/hub@main/skiinfo/full.css'; // O il tuo URL CSS corretto
+  const cssUrl = 'https://cdn.jsdelivr.net/gh/peer-travel/hub@main/skiinfo/full.css';
 
   try {
     const response = await fetch(cssUrl);

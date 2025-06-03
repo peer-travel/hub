@@ -1,5 +1,6 @@
+
 const odhElement = document.getElementById('mySkiInfo');
-let tabActionCompleted = false;
+let initialTabSet = false; // Modificato da tabActionCompleted per maggiore chiarezza
 let stylesInjected = false;
 let mainObserver = null;
 
@@ -11,7 +12,6 @@ async function injectCustomStyles() {
   try {
     const response = await fetch(cssUrl);
     if (!response.ok) {
-      // console.error(`CSS Fetch Error: ${response.status} for ${cssUrl}`);
       return false;
     }
     const cssText = await response.text();
@@ -19,10 +19,8 @@ async function injectCustomStyles() {
     styleSheet.textContent = cssText;
     odhElement.shadowRoot.appendChild(styleSheet);
     stylesInjected = true;
-    // console.log(`SUCCESS: Custom CSS from ${cssUrl} injected.`);
     return true;
   } catch (error) {
-    // console.error(`Error fetching/applying CSS from ${cssUrl}:`, error);
     return false;
   }
 }
@@ -31,6 +29,7 @@ function hideSpecificInfoRows() {
   if (!odhElement || !odhElement.shadowRoot) return;
 
   const shadow = odhElement.shadowRoot;
+  // Selettore per i div "riga informativa". Deve essere preciso.
   const infoRowSelector = 'div[class*="col-"]';
   const infoRows = shadow.querySelectorAll(infoRowSelector);
 
@@ -50,11 +49,10 @@ function hideSpecificInfoRows() {
     const currentLanguage = odhElement.getAttribute('language') || 'en';
     const webLabels = {
       'de': 'Web:',
-      'it': 'Web:',
+      'it': 'Web:', // Verifica questa etichetta per l'italiano
       'en': 'Web:'
     };
     const expectedWebLabelText = webLabels[currentLanguage] || webLabels['en'];
-
     const webLabelSpan = Array.from(rowDiv.querySelectorAll('span')).find(
       span => span.textContent.trim().toLowerCase() === expectedWebLabelText.toLowerCase()
     );
@@ -68,7 +66,7 @@ function hideSpecificInfoRows() {
   });
 }
 
-function selectTargetTab() {
+function setInitialTargetTab() { // Rinominata per chiarezza del suo scopo
   if (!odhElement || !odhElement.vueComponent) return false;
 
   const mainVueInstance = odhElement.vueComponent;
@@ -99,48 +97,57 @@ function selectTargetTab() {
         itemDetailInstance.selectedMenu = targetTab;
         itemDetailInstance.$forceUpdate();
       }
-
       return true;
     }
   }
   return false;
 }
 
-async function runPostRenderModifications() {
-  if (!tabActionCompleted) {
-    tabActionCompleted = selectTargetTab();
+// Callback per il MutationObserver
+async function handleDOMChanges() {
+  // Imposta il tab di default solo la prima volta che questa callback viene eseguita con successo
+  if (!initialTabSet) {
+    initialTabSet = setInitialTargetTab();
   }
 
+  // Controlla sempre se il tab "Info" è quello attualmente attivo nel componente
+  // e applica la logica di nascondiglio se necessario.
   if (odhElement && odhElement.vueComponent) {
     const mainVueInstance = odhElement.vueComponent;
-    const itemDetailInstance = mainVueInstance.$children && mainVueInstance.$children.find(
+    if (mainVueInstance.$children) {
+      const itemDetailInstance = mainVueInstance.$children.find(
         child => child && typeof child.selectedMenu === 'string'
-    );
-    
-    if (itemDetailInstance && itemDetailInstance.selectedMenu === 'Info') {
-      hideSpecificInfoRows();
+      );
+      // Se itemDetailInstance esiste E il suo tab selezionato è "Info"
+      if (itemDetailInstance && itemDetailInstance.selectedMenu === 'Info') {
+        hideSpecificInfoRows();
+      }
     }
   }
-
+  // L'observer non viene disconnesso, così questa funzione viene chiamata
+  // ad ogni mutazione rilevante (es. cambio di tab che ri-renderizza il contenuto).
 }
 
 if (odhElement) {
-  mainObserver = new MutationObserver(runPostRenderModifications);
+  mainObserver = new MutationObserver(handleDOMChanges);
 
-  const initializeComponentModifications = async () => {
+  const initializeComponentAndObserver = async () => {
     if (odhElement.shadowRoot) {
-      await injectCustomStyles();
+      await injectCustomStyles(); // Inietta gli stili generali una volta
+      
       mainObserver.observe(odhElement.shadowRoot, {
-        childList: true,
-        subtree: true
+        childList: true,  // Osserva aggiunte/rimozioni di nodi figli
+        subtree: true     // Osserva anche i discendenti
+        // attributes: true // Potrebbe essere utile se il cambio tab modifica solo attributi
+                           // ma per ora childList e subtree dovrebbero bastare
       });
-      runPostRenderModifications();
+      handleDOMChanges(); // Esegui una prima volta per l'impostazione iniziale del tab e il nascondiglio
     }
   };
 
   customElements.whenDefined('odh-tourism-skiinfo').then(() => {
-    setTimeout(initializeComponentModifications, 150);
-  }).catch(error => { /* psssst */ });
+    setTimeout(initializeComponentAndObserver, 200); // Timeout leggermente aumentato per il fetch CSS
+  }).catch(error => { /* Gestione errore silenziata */ });
 } else {
-  /* psssst */
+  /* Gestione errore silenziata */
 }
